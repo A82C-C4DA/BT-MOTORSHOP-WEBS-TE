@@ -655,12 +655,26 @@ try {
 	$urunlerHasSira = false;
 }
 
-// Cogu urunun sira degeri 9999 ise yukleme tarihine gore (id DESC) otomatik numaralandir
+// PERFORMANS: Sira yeniden hesaplama ARTIK sayfa acilisinda calismiyor.
+// Eskiden cogu urunun sira=9999 olmasi durumunda her acilista tum tablo tek tek
+// UPDATE ediliyordu (binlerce sorgu = asiri yavas yukleme). Toplu yeniden
+// numaralandirma icin sayfadaki "Sirayi Topluca Guncelle" aksiyonu kullanilir
+// (AJAX action=sira_toplu -> urunler_recalc_sira_by_yukleme_tarihi).
+
+// PERFORMANS: Liste sorgularinin dayandigi indexleri (yoksa) bir kez olustur.
 try {
-	$staleSiraCount = (int)$db->query('SELECT COUNT(*) FROM urun WHERE sira >= 9999')->fetchColumn();
-	$totalUrunCount = (int)$db->query('SELECT COUNT(*) FROM urun')->fetchColumn();
-	if ($totalUrunCount > 0 && $staleSiraCount > 0 && $staleSiraCount >= (int)ceil($totalUrunCount * 0.5)) {
-		urunler_recalc_sira_by_yukleme_tarihi($db);
+	$ensureIndexes = array(
+		'urun'          => array('idx_urun_sira' => 'sira'),
+		'urun_img'      => array('idx_urunimg_urunid' => 'urun_id'),
+		'urun_kategori' => array('idx_uk_urunid' => 'urun_id', 'idx_uk_katid' => 'kategori_id'),
+	);
+	foreach ($ensureIndexes as $tbl => $idxs) {
+		foreach ($idxs as $idxName => $col) {
+			$idxExists = $db->query("SHOW INDEX FROM {$tbl} WHERE Key_name = '{$idxName}'")->fetch();
+			if (!$idxExists) {
+				$db->exec("ALTER TABLE {$tbl} ADD INDEX {$idxName} ({$col})");
+			}
+		}
 	}
 } catch (Exception $e) {
 }
@@ -862,6 +876,9 @@ try {
 										  
 										  // Siralama tipi
 										  $categoryDir = ($sortType === 'kategori_desc') ? 'DESC' : 'ASC';
+										  // ks (kategori siralama) alt-sorgusu yalnizca kategori sortunda gerekli.
+										  // Diger durumlarda bu agir GROUP BY JOIN'i hic kurulmaz.
+										  $ksJoin = '';
 										  if ($sortType === 'yeni') {
 										  	$orderSql = "u.id DESC";
 										  } elseif ($sortType === 'eski') {
@@ -871,6 +888,7 @@ try {
 										  } elseif ($sortType === 'sira_asc' || $selectedCategoryId > 0) {
 										  	$orderSql = "u.sira ASC, u.baslik ASC, u.id DESC";
 										  } else {
+										  	$ksJoin = " LEFT JOIN ( SELECT uk.urun_id, MIN(k.baslik) AS kategori_siralama FROM urun_kategori uk INNER JOIN kategori k ON k.id = uk.kategori_id GROUP BY uk.urun_id ) ks ON ks.urun_id = u.id ";
 										  	$orderSql = "CASE WHEN ks.kategori_siralama IS NULL OR ks.kategori_siralama = '' THEN 1 ELSE 0 END, ks.kategori_siralama {$categoryDir}, u.sira ASC, u.baslik ASC, u.id DESC";
 										  }
 										  $kategoriFilterJoin = '';
@@ -888,12 +906,7 @@ try {
 										  		SELECT u.id
 										  		FROM urun u
 										  		{$kategoriFilterJoin}
-										  		LEFT JOIN (
-										  			SELECT uk.urun_id, MIN(k.baslik) AS kategori_siralama
-										  			FROM urun_kategori uk
-										  			INNER JOIN kategori k ON k.id = uk.kategori_id
-										  			GROUP BY uk.urun_id
-										  		) ks ON ks.urun_id = u.id
+										  		{$ksJoin}
 										  		WHERE (u.baslik LIKE '%{$araEscaped}%' OR u.stok_kodu LIKE '%{$araEscaped}%')
 										  		{$kategoriFilterWhere}
 										  		ORDER BY {$orderSql}
@@ -903,12 +916,7 @@ try {
 										  		SELECT u.id
 										  		FROM urun u
 										  		{$kategoriFilterJoin}
-										  		LEFT JOIN (
-										  			SELECT uk.urun_id, MIN(k.baslik) AS kategori_siralama
-										  			FROM urun_kategori uk
-										  			INNER JOIN kategori k ON k.id = uk.kategori_id
-										  			GROUP BY uk.urun_id
-										  		) ks ON ks.urun_id = u.id
+										  		{$ksJoin}
 										  		WHERE 1=1
 										  		{$kategoriFilterWhere}
 										  		ORDER BY {$orderSql}
@@ -946,18 +954,29 @@ try {
 										  	}
 										  }
 					                      if($query && $query->rowCount()){
-					                        foreach( $query as $row ){
-
-					                        $img = $db->query("SELECT * FROM urun_img WHERE urun_id = '{$row['id']}' LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-					                        
-					                        // Kategori bilgisini al
-					                        $kategori_query = $db->query("SELECT kategori.baslik FROM urun_kategori INNER JOIN kategori ON urun_kategori.kategori_id = kategori.id WHERE urun_kategori.urun_id = '{$row['id']}' ORDER BY kategori.baslik ASC", PDO::FETCH_ASSOC);
-					                        $kategoriler = [];
-					                        if($kategori_query->rowCount()){
-					                        	foreach($kategori_query as $kat){
-					                        		$kategoriler[] = $kat['baslik'];
-					                        	}
+					                        // PERFORMANS: Tum satirlari bir kez al, sonra resim ve kategorileri
+					                        // satir-basina-sorgu (N+1) yerine TEK sorguda toplu cek.
+					                        $rows = $query->fetchAll(PDO::FETCH_ASSOC);
+					                        $rowIds = array();
+					                        foreach ($rows as $r) { $rowIds[] = (int)$r['id']; }
+					                        $imgMap = array();
+					                        $katMap = array();
+					                        if (!empty($rowIds)) {
+					                        	$inIds = implode(',', $rowIds);
+					                        	// Her urun icin ilk (en kucuk id'li) resim
+					                        	$imgStmt = $db->query("SELECT ui.* FROM urun_img ui INNER JOIN (SELECT urun_id, MIN(id) AS mid FROM urun_img WHERE urun_id IN ({$inIds}) GROUP BY urun_id) t ON t.mid = ui.id", PDO::FETCH_ASSOC);
+					                        	if ($imgStmt) { foreach ($imgStmt as $ir) { $imgMap[(int)$ir['urun_id']] = $ir; } }
+					                        	// Tum kategoriler tek sorguda
+					                        	$katStmt = $db->query("SELECT uk.urun_id, k.baslik FROM urun_kategori uk INNER JOIN kategori k ON k.id = uk.kategori_id WHERE uk.urun_id IN ({$inIds}) ORDER BY k.baslik ASC", PDO::FETCH_ASSOC);
+					                        	if ($katStmt) { foreach ($katStmt as $kr) { $katMap[(int)$kr['urun_id']][] = $kr['baslik']; } }
 					                        }
+					                        foreach( $rows as $row ){
+
+					                        $rowId = (int)$row['id'];
+					                        $img = isset($imgMap[$rowId]) ? $imgMap[$rowId] : false;
+
+					                        // Kategori bilgisini al (toplu cekilen haritadan)
+					                        $kategoriler = isset($katMap[$rowId]) ? $katMap[$rowId] : array();
 					                        $kategori_text = !empty($kategoriler) ? implode(', ', $kategoriler) : 'Kategori Yok';
 					                        
 					                        $img_src = isset($img['img']) ? media_panel_url($img['img']) : media_panel_url('');
@@ -968,6 +987,8 @@ try {
 					                        	. '<div class="input-group-append">'
 					                        		. '<button type="button" class="btn btn-outline-success btn-sm js-seo-baslik-btn" data-urun-id="'.(int)$row['id'].'" title="SEO isim oner"><i class="fa fa-magic"></i></button>'
 					                        		. '<button type="button" class="btn btn-outline-info btn-sm js-translate-baslik-btn" data-urun-id="'.(int)$row['id'].'" title="Bu urunu tum dillere otomatik cevir"><i class="fa fa-language"></i></button>'
+					                        		. '<button type="button" class="btn btn-outline-warning btn-sm js-tecdoc-sync-btn" data-urun-id="'.(int)$row['id'].'" data-stok-kodu="'.htmlspecialchars($stok_kodu_raw, ENT_QUOTES, 'UTF-8').'" title="TecDoc OEM kodlari ve gorselleri cek"><i class="fa fa-cloud-download"></i></button>'
+					                        		. '<button type="button" class="btn btn-outline-secondary btn-sm js-kms-referans-btn" data-urun-id="'.(int)$row['id'].'" data-stok-kodu="'.htmlspecialchars($stok_kodu_raw, ENT_QUOTES, 'UTF-8').'" title="KMotorShop OEM referans (ucretsiz)"><i class="fa fa-link"></i></button>'
 					                        	. '</div>'
 					                        	. '<span class="js-row-action-marks" data-urun-id="'.(int)$row['id'].'" style="display:inline-flex;align-items:center;gap:3px;margin-left:6px;"></span>'
 					                        	. '</div>';
@@ -1482,6 +1503,8 @@ function translateWithMyMemory(text, fromLang, toLang) {
 (function() {
 	var seoAjaxUrl = window.seoAjaxUrl || 'inc/ajax-product-seo-title.php';
 	var translateAjaxUrl = window.translateAjaxUrl || 'inc/ajax-product-translate.php';
+	var tecdocAjaxUrl = '../api-tecdoc.php';
+	var kmsReferansAjaxUrl = '../api-kms-referans.php';
 	function postForm(url, data) {
 		return new Promise(function(resolve, reject) {
 			if (typeof jQuery !== 'undefined') {
@@ -1724,6 +1747,102 @@ function translateWithMyMemory(text, fromLang, toLang) {
 				});
 		});
 	}
+	function kmsLocalCommand(stok, uid) {
+		var clean = String(stok || '').replace(/^(30-|31-|32-|3e-?)/i, '').trim();
+		return '.\\kmotorshop-yerel-referans-cek.ps1 -Site "https://btmotorshop.com" -ProductId ' + uid + ' -Code "' + clean + '"';
+	}
+	function bindKmsReferansBtn() {
+		if (typeof jQuery === 'undefined') return;
+		var $ = jQuery;
+		$(document).off('click', '.js-kms-referans-btn').on('click', '.js-kms-referans-btn', function() {
+			var $btn = $(this);
+			var uid = parseInt($btn.data('urun-id'), 10);
+			var stok = String($btn.data('stok-kodu') || '').trim();
+			if (!uid || $btn.prop('disabled')) return;
+			var localCmd = kmsLocalCommand(stok, uid);
+			if (!confirm(
+				'KMotorShop referansi panel SUNUCUSUNDAN cekilemez (403 engeli).\n\n' +
+				'Stok: ' + (stok || '(bos)') + '\n\n' +
+				'Yine de sunucudan denemek ister misiniz?\n' +
+				'(Genelde basarisiz olur; asil yol yerel PowerShell komutu.)'
+			)) {
+				alert('Yerel PowerShell komutu:\n\n' + localCmd + '\n\nProje klasorunde calistirin.');
+				return;
+			}
+			var originalHtml = $btn.html();
+			$btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+			fetch(kmsReferansAjaxUrl + '?ajax=1&action=syncProduct&urun_id=' + encodeURIComponent(uid))
+				.then(function(r) { return r.text(); })
+				.then(function(text) {
+					var data = tryParseKapakJson(text);
+					if (!data) {
+						throw new Error('Gecersiz sunucu yaniti: ' + String(text || '').substring(0, 200));
+					}
+					if (!data.success) {
+						var err = new Error(data.error || 'KMS referans sync basarisiz');
+						err.kmsLocal = data.use_local_script ? (data.local_command || localCmd) : localCmd;
+						throw err;
+					}
+					markRowAction(uid, 'kms');
+					alert('KMotorShop referans eklendi.\n\nYeni: ' + (data.referans_added || 0) + ' / Bulunan: ' + (data.referans_found || 0));
+				})
+				.catch(function(err) {
+					var cmd = (err && err.kmsLocal) ? err.kmsLocal : localCmd;
+					alert(
+						((err && err.message) ? err.message : 'KMS referans hatasi') +
+						'\n\n--- Yerel cozum (PowerShell) ---\n' + cmd
+					);
+				})
+				.finally(function() {
+					$btn.prop('disabled', false).html(originalHtml);
+				});
+		});
+	}
+	function bindTecDocSyncBtn() {
+		if (typeof jQuery === 'undefined') return;
+		var $ = jQuery;
+		$(document).off('click', '.js-tecdoc-sync-btn').on('click', '.js-tecdoc-sync-btn', function() {
+			var $btn = $(this);
+			var uid = parseInt($btn.data('urun-id'), 10);
+			var stok = String($btn.data('stok-kodu') || '').trim();
+			if (!uid) return;
+			if ($btn.prop('disabled')) return;
+			if (!confirm('Bu urun icin TecDoc\'tan OEM kodlari ve gorseller cekilsin mi?\n\nStok kodu: ' + (stok || '(bos)'))) {
+				return;
+			}
+			var originalHtml = $btn.html();
+			$btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+			var url = tecdocAjaxUrl + '?ajax=1&action=syncProduct&urun_id=' + encodeURIComponent(uid);
+			fetch(url)
+				.then(function(r) { return r.text(); })
+				.then(function(text) {
+					var data = tryParseKapakJson(text);
+					if (!data) {
+						throw new Error('Gecersiz sunucu yaniti: ' + String(text || '').substring(0, 200));
+					}
+					if (!data.success) {
+						throw new Error(data.error || 'TecDoc sync basarisiz');
+					}
+					markRowAction(uid, 'tecdoc');
+					var msg = 'TecDoc verisi eklendi.\n\n';
+					msg += 'OEM eklenen: ' + (data.oem_added || 0) + ' / ' + (data.oem_total || 0) + '\n';
+					msg += 'Gorsel eklenen: ' + (data.images_added || 0) + ' / ' + (data.images_total || 0);
+					if (data.images_added > 0) {
+						msg += '\n\nSayfayi yenilerseniz kapak gorseli guncellenmis olabilir.';
+					}
+					alert(msg);
+					if (data.images_added > 0) {
+						location.reload();
+					}
+				})
+				.catch(function(err) {
+					alert((err && err.message) ? err.message : 'TecDoc hatasi');
+				})
+				.finally(function() {
+					$btn.prop('disabled', false).html(originalHtml);
+				});
+		});
+	}
 	// --- "Basildi" isaretleri (localStorage'da saklanir, sayfa yenilense de kalir) ---
 	function rowMarkStorageKey() { return 'urunler_row_marks_v1'; }
 	function getRowMarks() {
@@ -1753,6 +1872,8 @@ function translateWithMyMemory(text, fromLang, toLang) {
 			var html = '';
 			if (m.seo) html += badgeHtml('SEO', '#28a745');
 			if (m.translate) html += badgeHtml('Ceviri', '#17a2b8');
+			if (m.tecdoc) html += badgeHtml('TecDoc', '#fd7e14');
+			if (m.kms) html += badgeHtml('KMS', '#6c757d');
 			$(this).html(html);
 		});
 	}
@@ -1883,6 +2004,8 @@ function translateWithMyMemory(text, fromLang, toLang) {
 			bindInlineBaslik();
 			bindSeoBaslikBtn();
 			bindTranslateBaslikBtn();
+			bindTecDocSyncBtn();
+			bindKmsReferansBtn();
 			renderRowMarks();
 			bindThumbDrop();
 			bindFilterAutoSubmit();
@@ -1894,6 +2017,8 @@ function translateWithMyMemory(text, fromLang, toLang) {
 		bindInlineBaslik();
 		bindSeoBaslikBtn();
 		bindTranslateBaslikBtn();
+		bindTecDocSyncBtn();
+		bindKmsReferansBtn();
 		renderRowMarks();
 		bindThumbDrop();
 		bindFilterAutoSubmit();

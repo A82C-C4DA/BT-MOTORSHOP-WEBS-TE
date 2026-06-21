@@ -86,7 +86,11 @@ function Parse-ReferansFromDetail([string]$html, [string]$primaryCode) {
     $brands = 'CUMMINS|TEMSA|TATA|FORD|BOSCH|DAF|MAN|VOLVO|SCANIA|IVECO|RENAULT|PEUGEOT|CITROEN|NISSAN|TOYOTA|HYUNDAI|KIA|MAZDA|HONDA|MERCEDES|VW|AUDI|OPEL|BMW|JAGUAR'
 
     foreach ($m in [regex]::Matches($html, '(?i)/en/article-list/oe-list/([^"''?\s#]+)')) {
-        $no = [uri]::UnescapeDataString($m.Groups[1].Value)
+        # Linkler bazen cift (hatta uc) URL-encode: 0%2520414... -> %20 kalmasin diye tekrar tekrar coz.
+        $no = $m.Groups[1].Value
+        for ($dec = 0; $dec -lt 4 -and ($no -match '%[0-9A-Fa-f]{2}'); $dec++) {
+            $no = [uri]::UnescapeDataString($no)
+        }
         if ((($no -replace '[\s\.\-]', '').ToLower()) -ne $primaryNorm) {
             Add-Ref $map $no 'OEM'
         }
@@ -145,8 +149,12 @@ function Get-ImageUrlFromHtml([string]$html) {
         $lu = $u.ToLower()
         if ($lu -match '/images/brand-logo/') { continue }
         if ($lu -match '/images/360_') { continue }
-        if ($lu -match 'tn_600_ruzne') { continue }
-        if ($lu -match '/document/tecdoc/') { return $u }
+        if ($lu -match 'ruzne') { continue }
+        if ($lu -match '/document/tecdoc/') {
+            # tn_600_ / tn_80_ gibi kucuk resim onekini kaldirip tam boyutu tercih et.
+            $u = $u -replace '/tn_\d+_', '/'
+            return $u
+        }
     }
     return ''
 }
@@ -156,13 +164,16 @@ function Save-Image([int]$productId, [string]$imageUrl) {
     $ext = 'jpg'
     if ($imageUrl -match '\.(jpe?g|png|webp)(\?|$)') { $ext = ($matches[1].ToLower() -replace 'jpeg', 'jpg') }
     $tmp = Join-Path $env:TEMP ("kmsimg_" + [guid]::NewGuid().ToString('N') + "." + $ext)
-    try { & curl.exe -s -A $UA --max-time 40 -o $tmp $imageUrl } catch { return @{ ok = $false; error = 'download' } }
+    # URL'de bosluk vb. olabilir (Bosch tecdoc yollari) -> encode et yoksa curl indiremez.
+    $dlUrl = $imageUrl -replace ' ', '%20'
+    try { & curl.exe -s -A $UA --max-time 40 -o $tmp $dlUrl } catch { return @{ ok = $false; error = 'download' } }
     if (-not (Test-Path $tmp) -or (Get-Item $tmp).Length -lt 200) {
         if (Test-Path $tmp) { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
         return @{ ok = $false; error = 'empty' }
     }
+    $tmpFwd = $tmp -replace '\\', '/'
     try {
-        $resp = & curl.exe -s --max-time 60 -F "urun_id=$productId" -F "only_if_no_image=1" -F ("gorsel=@" + $tmp + ";type=image/jpeg") "$($receiver)?action=save&token=$Token"
+        $resp = & curl.exe -s --max-time 60 -F "urun_id=$productId" -F "only_if_no_image=1" -F ("gorsel=@`"" + $tmpFwd + "`";type=image/jpeg") "$($receiver)?action=save&token=$Token"
         $j = $resp | ConvertFrom-Json
     } catch { $j = $null }
     Remove-Item $tmp -Force -ErrorAction SilentlyContinue

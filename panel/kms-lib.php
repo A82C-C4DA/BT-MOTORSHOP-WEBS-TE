@@ -138,11 +138,12 @@ function kms_extract_image_from_html($html) {
             if (strpos($u, '/images/360_') !== false) {
                 continue;
             }
-            if (strpos($u, 'tn_600_ruzne') !== false) {
+            if (strpos($u, 'ruzne') !== false) {
                 continue;
             }
             if (strpos($u, '/document/tecdoc/') !== false) {
-                $candidates[] = $url;
+                // tn_600_ / tn_80_ kucuk resim onekini kaldirip tam boyutu tercih et.
+                $candidates[] = preg_replace('#/tn_\d+_#', '/', $url);
             }
         }
     }
@@ -209,7 +210,12 @@ function kms_extract_referans_from_detail_html($html, $primaryCode = '') {
 
     if (preg_match_all('#/en/article-list/oe-list/([^"\'?\s#]+)#iu', (string)$html, $oeLinks)) {
         foreach ($oeLinks[1] as $raw) {
-            $add(rawurldecode($raw), 'OEM');
+            // Bazen cift/uc URL-encode (0%2520414...) -> %20 kalmasin diye tekrar coz.
+            $dec = $raw;
+            for ($i = 0; $i < 4 && preg_match('/%[0-9A-Fa-f]{2}/', $dec); $i++) {
+                $dec = rawurldecode($dec);
+            }
+            $add($dec, 'OEM');
         }
     }
 
@@ -360,6 +366,8 @@ function kms_download_image_to_temp($url, &$ext) {
     if ($url === '' || !preg_match('#^https?://#i', $url) || !function_exists('curl_init')) {
         return false;
     }
+    // URL'de bosluk olabilir (Bosch tecdoc yollari) -> encode et yoksa curl 404 alir.
+    $url = str_replace(' ', '%20', $url);
     $tmp = tempnam(sys_get_temp_dir(), 'kmsimg_');
     $ch = curl_init($url);
     curl_setopt_array($ch, [

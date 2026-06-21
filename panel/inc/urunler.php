@@ -988,7 +988,7 @@ try {
 					                        		. '<button type="button" class="btn btn-outline-success btn-sm js-seo-baslik-btn" data-urun-id="'.(int)$row['id'].'" title="SEO isim oner"><i class="fa fa-magic"></i></button>'
 					                        		. '<button type="button" class="btn btn-outline-info btn-sm js-translate-baslik-btn" data-urun-id="'.(int)$row['id'].'" title="Bu urunu tum dillere otomatik cevir"><i class="fa fa-language"></i></button>'
 					                        		. '<button type="button" class="btn btn-outline-warning btn-sm js-tecdoc-sync-btn" data-urun-id="'.(int)$row['id'].'" data-stok-kodu="'.htmlspecialchars($stok_kodu_raw, ENT_QUOTES, 'UTF-8').'" title="TecDoc OEM kodlari ve gorselleri cek"><i class="fa fa-cloud-download"></i></button>'
-					                        		. '<button type="button" class="btn btn-outline-secondary btn-sm js-kms-referans-btn" data-urun-id="'.(int)$row['id'].'" data-stok-kodu="'.htmlspecialchars($stok_kodu_raw, ENT_QUOTES, 'UTF-8').'" title="KMotorShop OEM referans (ucretsiz)"><i class="fa fa-link"></i></button>'
+					                        		. '<button type="button" class="btn btn-outline-secondary btn-sm js-kms-referans-btn" data-urun-id="'.(int)$row['id'].'" data-stok-kodu="'.htmlspecialchars($stok_kodu_raw, ENT_QUOTES, 'UTF-8').'" title="KMotorShop OEM referans + gorsel cek"><i class="fa fa-link"></i></button>'
 					                        	. '</div>'
 					                        	. '<span class="js-row-action-marks" data-urun-id="'.(int)$row['id'].'" style="display:inline-flex;align-items:center;gap:3px;margin-left:6px;"></span>'
 					                        	. '</div>';
@@ -1761,12 +1761,10 @@ function translateWithMyMemory(text, fromLang, toLang) {
 			if (!uid || $btn.prop('disabled')) return;
 			var localCmd = kmsLocalCommand(stok, uid);
 			if (!confirm(
-				'KMotorShop referansi panel SUNUCUSUNDAN cekilemez (403 engeli).\n\n' +
+				'Bu urun icin KMotorShop\'tan OEM referanslari ve gorsel cekilsin mi?\n\n' +
 				'Stok: ' + (stok || '(bos)') + '\n\n' +
-				'Yine de sunucudan denemek ister misiniz?\n' +
-				'(Genelde basarisiz olur; asil yol yerel PowerShell komutu.)'
+				'(Sunucu KMotorShop tarafindan engellenirse yerel PowerShell komutu gosterilir.)'
 			)) {
-				alert('Yerel PowerShell komutu:\n\n' + localCmd + '\n\nProje klasorunde calistirin.');
 				return;
 			}
 			var originalHtml = $btn.html();
@@ -1784,7 +1782,12 @@ function translateWithMyMemory(text, fromLang, toLang) {
 						throw err;
 					}
 					markRowAction(uid, 'kms');
-					alert('KMotorShop referans eklendi.\n\nYeni: ' + (data.referans_added || 0) + ' / Bulunan: ' + (data.referans_found || 0));
+					var kmsMsg = 'KMotorShop verisi cekildi.\n\n';
+					kmsMsg += 'Referans - yeni: ' + (data.referans_added || 0) + ' / bulunan: ' + (data.referans_found || 0) + '\n';
+					kmsMsg += 'Gorsel eklenen: ' + (data.image_added || 0);
+					if (data.image_note) { kmsMsg += ' (' + data.image_note + ')'; }
+					alert(kmsMsg);
+					if (data.image_added > 0) { location.reload(); }
 				})
 				.catch(function(err) {
 					var cmd = (err && err.kmsLocal) ? err.kmsLocal : localCmd;

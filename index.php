@@ -31,9 +31,9 @@
     $cek = $db->query("SELECT * FROM ayar LIMIT 1")->fetch(PDO::FETCH_ASSOC);
 
     $performance_settings = [
-      'page_cache_enabled' => true,
+      'page_cache_enabled' => false,
       'page_cache_ttl' => 180, // saniye
-      'asset_minify_enabled' => true
+      'asset_minify_enabled' => false
     ];
 
     function perf_should_cache_page() {

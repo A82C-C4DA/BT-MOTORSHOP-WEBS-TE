@@ -5,4 +5,4 @@ deployment:
     # Tum siteyi public_html'e kopyala. --delete YOK: public_html'de olup
     # repoda olmayan dosyalar (kullanici yuklemeleri, cache, config) silinmez.
     # Asagidaki klasor/dosyalar deploy disi tutulur (sunucuya ait veri/ayar).
-    - /usr/bin/rsync -a --exclude='.git' --exclude='.cpanel.yml' --exclude='.claude' --exclude='.gitignore' --exclude='cache/' --exclude='upload/' --exclude='logs/' --exclude='error_log' --exclude='tecdoc-config.php' ./ "$DEPLOYPATH/"
+    - /usr/bin/rsync -a --exclude='.git' --exclude='.cpanel.yml' --exclude='.claude' --exclude='.gitignore' --exclude='cache/' --exclude='upload/' --exclude='logs/' --exclude='error_log' --exclude='tecdoc-config.php' --exclude='*.ps1' --exclude='kms-*.txt' --exclude='_kms-*.html' ./ "$DEPLOYPATH/"

@@ -913,7 +913,7 @@
                         <div class="col-lg-4">
                             <div class="mb-6">
                                 <a href="#" class="d-inline-block">
-                                    <img src="upload/<?php echo $cek['logo']; ?>" alt="<?php echo $cek['title']; ?>" title="<?php echo $cek['title']; ?>" style="max-height: 60px; width: auto; max-width: 100%;">
+                                    <img src="upload/<?php echo $cek['logo']; ?>" alt="<?php echo $cek['title']; ?>" title="<?php echo $cek['title']; ?>" style="max-height: 40px; width: auto; max-width: 100%;">
                                 </a>
                             </div>
                             <div class="mb-4">

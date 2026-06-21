@@ -2,4 +2,7 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/btmotors/public_html
-    - /bin/cp -f index.php "$DEPLOYPATH/index.php"
+    # Tum siteyi public_html'e kopyala. --delete YOK: public_html'de olup
+    # repoda olmayan dosyalar (kullanici yuklemeleri, cache, config) silinmez.
+    # Asagidaki klasor/dosyalar deploy disi tutulur (sunucuya ait veri/ayar).
+    - /usr/bin/rsync -a --exclude='.git' --exclude='.cpanel.yml' --exclude='.claude' --exclude='.gitignore' --exclude='cache/' --exclude='upload/' --exclude='logs/' --exclude='error_log' --exclude='tecdoc-config.php' ./ "$DEPLOYPATH/"

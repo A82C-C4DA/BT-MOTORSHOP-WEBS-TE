@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /panel/
+Disallow: /cgi-bin/
+Disallow: /logs/
+Disallow: /inc/
+Disallow: /vendor/
+
+Sitemap: https://btmotorshop.com/sitemap.xml

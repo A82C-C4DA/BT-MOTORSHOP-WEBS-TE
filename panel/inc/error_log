@@ -1,0 +1,5 @@
+[24-Jan-2026 22:09:32 Europe/Istanbul] PHP Notice:  Undefined variable: db in /home/btmotors/public_html/panel/inc/eryaz-kategori-eslestir.php on line 70
+[24-Jan-2026 22:09:32 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on null in /home/btmotors/public_html/panel/inc/eryaz-kategori-eslestir.php:70
+Stack trace:
+#0 {main}
+  thrown in /home/btmotors/public_html/panel/inc/eryaz-kategori-eslestir.php on line 70

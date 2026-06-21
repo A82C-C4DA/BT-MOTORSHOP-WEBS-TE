@@ -1,0 +1,74 @@
+#klasörü alt domaine yönlendir
+RewriteEngine On
+RewriteBase /
+RewriteCond %{HTTP_HOST} ^demoscript.net [NC]
+RewriteRule ^(.*)$ https://demoscript.net$1 [L,R=301]
+RedirectMatch 301 ^/demo/sayim/sym-eticaret-v6/(.*)$ https://sym-eticaret-v6.demoscript.net/$1
+
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+#RewriteCond %{HTTPS} off
+#RewriteRule .* https://%{HTTP_HOST}%{REQUEST_URI} 																	[L,R=301]
+#RewriteCond %{HTTP_HOST} !^www\. 																					[NC]
+#RewriteRule .* https://www.%{HTTP_HOST}%{REQUEST_URI} 																[L,R=301]
+
+RewriteRule ^iyzico-sonuc/([A-Za-z0-9-]+)$						index.php?sayfa=iyzico-sonuc&siparis_key=$1			[L]
+RewriteRule ^paytr-sonuc/([A-Za-z0-9-]+)$						index.php?sayfa=paytr-sonuc&siparis_key=$1			[L]
+RewriteRule ^shopier-sonuc$										index.php?sayfa=shopier-sonuc						[L]
+RewriteRule ^sitemap\.xml$										sitemap-olustur.php								[L]
+RewriteRule ^blog/([A-Za-z0-9-]+)$								index.php?sayfa=blog-detay&sef=$1					[L]
+RewriteRule ^urun/([A-Za-z0-9-]+)$								index.php?sayfa=urun&sef=$1							[L]
+RewriteRule ^urun-tasarla/([A-Za-z0-9-]+)$						index.php?sayfa=urun-tasarla&sef=$1					[L]
+RewriteRule ^sayfa/([A-Za-z0-9-]+)$								index.php?sayfa=sayfa&sef=$1						[L]
+RewriteRule ^kategori/([A-Za-z0-9-]+)$							index.php?sayfa=kategori&sef=$1&no=1				[NC,L,QSA]
+RewriteRule ^kategori/([A-Za-z0-9-]+)/([0-9]*)$					index.php?sayfa=kategori&sef=$1&no=$2				[NC,L,QSA]
+RewriteRule ^tasarla-kategori$									index.php?sayfa=tasarla-kategori&no=1				[NC,L,QSA]
+RewriteRule ^tasarla-kategori/([A-Za-z0-9-]+)$					index.php?sayfa=tasarla-kategori&sef=$1&no=1		[NC,L,QSA]
+RewriteRule ^tasarla-kategori/([A-Za-z0-9-]+)/([0-9]*)$			index.php?sayfa=tasarla-kategori&sef=$1&no=$2		[NC,L,QSA]
+RewriteRule ^([A-Za-z0-9-]+)$									index.php?sayfa=$1									[L]
+
+ErrorDocument 404 /404
+
+# Performans: Tarayici onbellekleme
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 30 days"
+    ExpiresByType application/javascript "access plus 30 days"
+    ExpiresByType text/javascript "access plus 30 days"
+    ExpiresByType image/svg+xml "access plus 30 days"
+    ExpiresByType image/x-icon "access plus 30 days"
+    ExpiresByType image/webp "access plus 30 days"
+    ExpiresByType image/jpeg "access plus 60 days"
+    ExpiresByType image/png "access plus 60 days"
+    ExpiresByType image/gif "access plus 60 days"
+    ExpiresByType font/woff2 "access plus 60 days"
+    ExpiresByType font/woff "access plus 60 days"
+    ExpiresByType application/font-woff2 "access plus 60 days"
+    ExpiresByType application/font-woff "access plus 60 days"
+    ExpiresDefault "access plus 1 hour"
+</IfModule>
+
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|jpg|jpeg|png|gif|svg|webp|ico|woff|woff2)$">
+        Header set Cache-Control "public, max-age=2592000, immutable"
+    </FilesMatch>
+    <FilesMatch "\.(html|htm|php)$">
+        Header set Cache-Control "private, max-age=0, must-revalidate"
+    </FilesMatch>
+</IfModule>
+
+# Performans: Gzip sikistirma
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/json
+</IfModule>

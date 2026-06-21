@@ -1,0 +1,64 @@
+===========================================
+PANEL / ERYAZ ÜRÜNLER — TOPLU SİL BUTONU
+===========================================
+
+HAZIR SAYFA:
+  panel/eryaz-urunler.php  →  https://siteniz.com/panel/eryaz-urunler
+  Bu dosyayı yüklediğinizde sayfada "Toplu Eryaz ürün sil" kutusu görünür.
+
+  Sunucuda AYNI URL için başka bir router/index kullanıyorsanız çakışma olabilir;
+  o zaman eski sayfayı yedekleyip birleştirin veya sadece include satırını ekleyin.
+
+Bu klasöre şu dosyaları yükleyin (sunucuda panel ile aynı yapı):
+
+  panel/eryaz-panel-giris-kontrol.php
+  panel/eryaz-toplu-sil-ajax.php
+  panel/inc/eryaz-urunler-toplu-sil-btn.php
+
+Kök dizinde zaten olmalı:
+
+  api-eryaz.php
+  eryaz-delete-products-worker.php
+
+-------------------------------------------
+ADIM 1 — Sayfaya include ekleyin
+-------------------------------------------
+
+Sunucudaki Eryaz ürünler sayfasını açın (ör. panel/inc/eryaz-urunler.php veya
+panel/eryaz-urunler.php — sitenizde hangi dosya route’a gidiyorsa).
+
+Butonların / içeriğin olduğu yere TEK satır ekleyin (yolu dosyanızın yerine göre düzeltin):
+
+  Örnek A — dosya: panel/eryaz-urunler.php
+    <?php include __DIR__ . '/inc/eryaz-urunler-toplu-sil-btn.php'; ?>
+
+  Örnek B — dosya: panel/inc/eryaz-urunler.php
+    <?php include __DIR__ . '/eryaz-urunler-toplu-sil-btn.php'; ?>
+
+Kaydedip FTP ile yükleyin.
+
+-------------------------------------------
+ADIM 2 — Giriş kontrolü (gerekirse)
+-------------------------------------------
+
+Butona basınca "Panel girişi gerekli" alıyorsanız, panel session anahtarınız
+listedeki gibi değilse düzenleyin:
+
+  panel/eryaz-panel-giris-kontrol.php
+
+İçindeki $anahtarlar dizisine kendi oturum anahtarınızı ekleyin.
+
+İleri düzey: panel/eryaz-panel-giris-ozel.php oluşturup sadece şunu yazın:
+
+  <?php
+  return isset($_SESSION['SIZIN_ANAHTAR']) && $_SESSION['SIZIN_ANAHTAR'];
+
+-------------------------------------------
+NOT
+-------------------------------------------
+
+Script, fetch adresi olarak /panel/eryaz-toplu-sil-ajax.php kullanır.
+Panel klasörünüz farklı adlıysa (ör. yonetim), eryaz-urunler-toplu-sil-btn.php
+içindeki fetch satırındaki yolu düzeltin.
+
+Bootstrap kullanıyorsanız card sınıfları uyumludur; yoksa yine de çalışır.

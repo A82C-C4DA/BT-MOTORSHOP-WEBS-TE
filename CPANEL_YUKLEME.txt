@@ -1,0 +1,78 @@
+===========================================
+cPanel DOĞRUDAN YÜKLEME TALİMATLARI
+===========================================
+
+GÜNCELLENEN DOSYA:
+------------------
+✓ index.php (Ana sayfa - Yükleme hızlandırma düzeltmesi)
+
+===========================================
+ADIM ADIM YÜKLEME:
+===========================================
+
+1. cPanel'e Giriş Yapın:
+   - Adres: https://btmotorshop.com:2083
+   - Kullanıcı: btmotors_batu
+   - Şifre: Batuece123.
+
+2. File Manager'ı Açın:
+   - Ana sayfada "File Manager" (Dosya Yöneticisi) butonuna tıklayın
+   - Veya "Files" bölümünden "File Manager" seçin
+
+3. public_html Klasörüne Gidin:
+   - Sol taraftaki klasör listesinden "public_html" klasörüne tıklayın
+   - Veya ana dizinde "public_html" klasörünü bulun
+
+4. Mevcut index.php Dosyasının Yedeğini Alın:
+   - index.php dosyasına sağ tıklayın
+   - "Download" (İndir) seçeneğini tıklayın
+   - Dosyayı bilgisayarınıza kaydedin (yedek için)
+
+5. index.php Dosyasını Düzenleyin:
+   - index.php dosyasına sağ tıklayın
+   - "Edit" (Düzenle) seçeneğini tıklayın
+   - Açılan editörde TÜM içeriği silin
+   - Yerel bilgisayarınızdaki GÜNCELLENMİŞ index.php dosyasını açın
+   - İçeriğin TAMAMINI kopyalayın (Ctrl+A, Ctrl+C)
+   - cPanel editörüne yapıştırın (Ctrl+V)
+   - "Save Changes" (Değişiklikleri Kaydet) butonuna tıklayın
+
+VEYA
+
+5. Dosyayı Upload ile Değiştirin:
+   - public_html klasöründeyken "Upload" (Yükle) butonuna tıklayın
+   - "Select File" (Dosya Seç) butonuna tıklayın
+   - Yerel bilgisayarınızdaki GÜNCELLENMİŞ index.php dosyasını seçin
+   - "Upload" butonuna tıklayın
+   - Mevcut dosyanın üzerine yazmak için "Overwrite" (Üzerine Yaz) seçeneğini onaylayın
+
+6. Dosya İzinlerini Kontrol Edin:
+   - index.php dosyasına sağ tıklayın
+   - "Change Permissions" (İzinleri Değiştir) seçin
+   - İzinlerin 644 olduğundan emin olun
+   - "Change Permissions" butonuna tıklayın
+
+7. Siteyi Test Edin:
+   - Tarayıcınızda https://btmotorshop.com adresine gidin
+   - Site anında açılıyor mu kontrol edin
+   - Tüm sayfaların düzgün çalıştığını doğrulayın
+
+===========================================
+YAPILAN DEĞİŞİKLİK:
+===========================================
+
+✓ Yükleme ekranı artık DOM hazır olur olmaz gizleniyor
+✓ Site çok daha hızlı açılıyor (anında)
+✓ Uploading gif'i artık çok kısa süre görünüyor
+
+===========================================
+SORUN GİDERME:
+===========================================
+
+Eğer site açılmıyorsa:
+1. Yedek dosyayı geri yükleyin
+2. Dosya izinlerini kontrol edin (644 olmalı)
+3. cPanel > Errors bölümünden hata loglarını kontrol edin
+
+===========================================
+

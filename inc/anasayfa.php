@@ -12,107 +12,125 @@
 </div>
 <!-- ========== MAIN CONTENT ========== -->
 <main id="content" role="main">
-    <!-- Slider Section -->
-    <div class="mb-4">
-        <div class="slider-container-3264x1312">
-            <div class="js-slick-carousel u-slick slider-main"
-                data-pagi-classes="text-center position-absolute right-0 bottom-0 left-0 u-slick__pagination u-slick__pagination--long justify-content-center mb-3">
-                <?php
-                  $query = $db->query("SELECT * FROM slider ORDER BY sira ASC", PDO::FETCH_ASSOC);
-                  if($query->rowCount()){
-                    foreach($query as $row){
-                ?>
-                <div class="js-slide">
-                    <div class="slider-slide-wrapper">
-                        <img class="slider-image" src="upload/<?php echo $row['img']; ?>" alt="<?php echo htmlspecialchars($row['aciklama']); ?>">
-                        <div class="slider-overlay">
-                            <div class="container">
-                                <div class="row align-items-center h-100">
-                                    <div class="col-12 col-md-8">
-                                        <h1 class="slider-title"
-                                            data-scs-animation-in="fadeInUp"
-                                            data-scs-animation-delay="200">
-                                           <strong class="font-weight-bold"><?php echo $row['aciklama']; ?></strong>
-                                        </h1>
-                                        <a href="<?php echo $row['link']; ?>" class="btn btn-primary transition-3d-hover rounded-lg py-2 px-md-7 px-3 font-size-16 slider-button"
-                                            data-scs-animation-in="fadeInUp"
-                                            data-scs-animation-delay="300">
-                                            Detaylı İncele
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
+    <!-- Hero: Arac Arama + 2'li Slider -->
+    <div class="container pt-4 mb-4 hero-arama-slider">
+        <div class="row align-items-center">
+            <!-- Sol: Sasi / Arac arama kutusu -->
+            <div class="col-lg-4 mb-4 mb-lg-0">
+                <div class="hero-search-card">
+                    <!-- Sasi numarasi ile ara -->
+                    <form action="ara" method="post">
+                        <input type="text" name="ara" class="form-control hero-input mb-2" placeholder="Şasi numarası ile ara" required>
+                        <button type="submit" class="btn hero-btn">Ara</button>
+                    </form>
+
+                    <hr class="hero-divider">
+
+                    <label class="hero-label mb-3">Uygun parçaları daha kolay bulabilmek için <strong>aracınızın model bilgilerini seçin.</strong></label>
+
+                    <!-- Marka / Model / Motor -->
+                    <form action="ara" method="post" id="hero-model-form">
+                        <select name="ara" id="hero-marka" class="form-control hero-select mb-3" required>
+                            <option value="" selected disabled>Marka</option>
+                            <?php
+                              $markaQ = $db->query("SELECT baslik FROM marka WHERE baslik <> '' ORDER BY baslik ASC", PDO::FETCH_ASSOC);
+                              if($markaQ){ foreach($markaQ as $m){ echo '<option value="'.htmlspecialchars($m['baslik']).'">'.htmlspecialchars($m['baslik']).'</option>'; } }
+                            ?>
+                        </select>
+                        <select id="hero-model" class="form-control hero-select mb-3" disabled>
+                            <option value="" selected disabled>Model</option>
+                        </select>
+                        <select id="hero-motor" class="form-control hero-select mb-3" disabled>
+                            <option value="" selected disabled>Motor</option>
+                        </select>
+                        <button type="submit" class="btn hero-btn">Ara</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Sag: 2'li slider -->
+            <div class="col-lg-8">
+                <div class="hero-slider-wrap">
+                    <div class="js-slick-carousel u-slick hero-slider"
+                        data-slides-show="2"
+                        data-slides-scroll="1"
+                        data-autoplay="true"
+                        data-infinite="true"
+                        data-pagi-classes="text-center position-absolute right-0 bottom-0 left-0 u-slick__pagination justify-content-center mb-2"
+                        data-responsive='[{"breakpoint":768,"settings":{"slidesToShow":1}}]'>
+                        <?php
+                          $sliderQ = $db->query("SELECT * FROM slider ORDER BY sira ASC", PDO::FETCH_ASSOC);
+                          if($sliderQ && $sliderQ->rowCount()){
+                            foreach($sliderQ as $row){
+                        ?>
+                        <div class="js-slide hero-slide">
+                            <a href="<?php echo $row['link']; ?>">
+                                <img class="hero-slide-img" src="upload/<?php echo $row['img']; ?>" alt="<?php echo htmlspecialchars($row['aciklama']); ?>">
+                            </a>
                         </div>
+                        <?php } } ?>
                     </div>
                 </div>
-                <?php } } ?>
             </div>
         </div>
     </div>
-    <!-- End Slider Section -->
+    <!-- End Hero Section -->
     <style>
-    /* Slider 3264x1312 Oranı */
-    .slider-container-3264x1312 {
-        position: relative;
-        width: 100%;
-        padding-top: 40.196%; /* 1312/3264 = 0.40196 = 40.196% (aspect ratio) */
-        overflow: hidden;
-        background-color: #000;
-    }
-    
-    .slider-container-3264x1312 .js-slick-carousel {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
+    /* === Hero: Arama kutusu + 2'li Slider === */
+    .hero-search-card {
+        background-color: #1c2536;
+        color: #fff;
+        padding: 1.75rem;
+        border-radius: 1rem;
         height: 100%;
     }
-    
-    .slider-slide-wrapper {
-        position: relative;
+    .hero-input,
+    .hero-select {
+        height: 52px;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 15px;
+        box-shadow: none;
         width: 100%;
-        height: 100%;
     }
-    
-    .slider-image {
+    .hero-input::placeholder { color: #8a93a6; }
+    .hero-select { color: #333; background-color: #fff; }
+    .hero-select:disabled { background-color: #e9ecef; color: #9aa0ab; cursor: not-allowed; }
+    .hero-btn {
         width: 100%;
-        height: 100%;
+        height: 52px;
+        background-color: #6c7689;
+        color: #fff;
+        font-weight: 600;
+        border: none;
+        border-radius: 0.5rem;
+        transition: background-color .2s ease;
+    }
+    .hero-btn:hover { background-color: #ff6600; color: #fff; }
+    .hero-divider { border-top: 1px solid rgba(255,255,255,.15); margin: 1.5rem 0; }
+    .hero-label { font-size: 16px; line-height: 1.4; color: #fff; display: block; }
+
+    /* Sag slider */
+    .hero-slider-wrap { position: relative; }
+    .hero-slide { padding: 0 8px; }
+    .hero-slide-img {
+        width: 100%;
+        aspect-ratio: 1 / 0.92;
+        height: auto;
         object-fit: cover;
         object-position: center;
+        border-radius: 1rem;
         display: block;
     }
-    
-    .slider-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(to right, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.2) 50%, transparent 100%);
-        display: flex;
-        align-items: center;
+    @supports not (aspect-ratio: 1 / 1) {
+        .hero-slide-img { height: 24vw; }
     }
-    
-    .slider-title {
-        font-size: 2.5rem;
-        line-height: 1.2;
-        font-weight: 300;
-        color: #fff;
-        margin-bottom: 1.5rem;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-    }
-    
-    .slider-button {
-        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    }
-    
-    @media (max-width: 768px) {
-        .slider-title {
-            font-size: 1.75rem;
-        }
-        
-        .slider-overlay {
-            background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%);
+    .hero-slider .slick-list { margin: 0 -8px; }
+
+    @media (max-width: 991px) {
+        .hero-slide-img { aspect-ratio: 16 / 7; }
+        @supports not (aspect-ratio: 1 / 1) {
+            .hero-slide-img { height: 40vw; }
         }
     }
     </style>

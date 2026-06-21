@@ -752,7 +752,7 @@
                                                 <button type="button" class="btn-link btn-remove-focus btn-block d-flex card-btn py-3 text-lh-1 px-4 shadow-none btn-primary rounded-top-lg border-0 font-weight-bold text-gray-90"
                                                     data-toggle="collapse"
                                                     data-target="#basicsCollapseOne"
-                                                    aria-expanded="true"
+                                                    aria-expanded="false"
                                                     aria-controls="basicsCollapseOne">
                                                     <span class="pl-1 text-gray-90"><?php echo t('all_categories', $language); ?></span>
                                                     <span class="text-gray-90 ml-3">
@@ -760,7 +760,7 @@
                                                     </span>
                                                 </button>
                                             </div>
-                                            <div id="basicsCollapseOne" class="collapse <?php if($sayfa == 'anasayfa'){ echo 'show'; } ?> vertical-menu v1"
+                                            <div id="basicsCollapseOne" class="collapse vertical-menu v1"
                                                 aria-labelledby="basicsHeadingOne"
                                                 data-parent="#basicsAccordion">
                                                 <div class="card-body p-0">

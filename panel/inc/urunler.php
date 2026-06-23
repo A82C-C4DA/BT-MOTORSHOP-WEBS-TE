@@ -662,30 +662,37 @@ try {
 // (AJAX action=sira_toplu -> urunler_recalc_sira_by_yukleme_tarihi).
 
 // PERFORMANS: Liste sorgularinin dayandigi indexleri (yoksa) bir kez olustur.
-try {
-	$ensureIndexes = array(
-		'urun'          => array(
-			'idx_urun_sira' => 'sira',
-			'idx_urun_id' => 'id',
-			'idx_urun_baslik' => 'baslik(100)',
-			'idx_urun_stok_kodu' => 'stok_kodu(50)',
-		),
-		'urun_img'      => array('idx_urunimg_urunid' => 'urun_id'),
-		'urun_kategori' => array(
-			'idx_uk_urunid' => 'urun_id',
-			'idx_uk_katid' => 'kategori_id',
-			'idx_uk_urunid_katid' => 'urun_id,kategori_id'
-		),
-	);
-	foreach ($ensureIndexes as $tbl => $idxs) {
-		foreach ($idxs as $idxName => $col) {
-			$idxExists = $db->query("SHOW INDEX FROM {$tbl} WHERE Key_name = '{$idxName}'")->fetch();
-			if (!$idxExists) {
-				$db->exec("ALTER TABLE {$tbl} ADD INDEX {$idxName} ({$col})");
+// NOT: Index olusturma cok yavas tablolari timeout yapabilir.
+// Bunun yerine cPanel'den SSH ile manuel calistir:
+// mysql> ALTER TABLE urun ADD INDEX idx_urun_baslik (baslik(100));
+// mysql> ALTER TABLE urun ADD INDEX idx_urun_stok_kodu (stok_kodu(50));
+// Bu satirlari aktif etmek istemiyorsan, asagidaki if false'u true yap
+if (false) { // Disabled for now - too slow
+	try {
+		$ensureIndexes = array(
+			'urun'          => array(
+				'idx_urun_sira' => 'sira',
+				'idx_urun_id' => 'id',
+				'idx_urun_baslik' => 'baslik(100)',
+				'idx_urun_stok_kodu' => 'stok_kodu(50)',
+			),
+			'urun_img'      => array('idx_urunimg_urunid' => 'urun_id'),
+			'urun_kategori' => array(
+				'idx_uk_urunid' => 'urun_id',
+				'idx_uk_katid' => 'kategori_id',
+				'idx_uk_urunid_katid' => 'urun_id,kategori_id'
+			),
+		);
+		foreach ($ensureIndexes as $tbl => $idxs) {
+			foreach ($idxs as $idxName => $col) {
+				$idxExists = $db->query("SHOW INDEX FROM {$tbl} WHERE Key_name = '{$idxName}'")->fetch();
+				if (!$idxExists) {
+					$db->exec("ALTER TABLE {$tbl} ADD INDEX {$idxName} ({$col})");
+				}
 			}
 		}
+	} catch (Exception $e) {
 	}
-} catch (Exception $e) {
 }
 ?>
 
@@ -897,13 +904,9 @@ try {
 										  } elseif ($sortType === 'sira_asc' || $selectedCategoryId > 0) {
 										  	$orderSql = "u.sira ASC, u.baslik ASC, u.id DESC";
 										  } else {
-										  	// PERFORMANS: Arama sirasinda kategori JOIN'i bypass et, hizli sirala
-										  	if ($searchTerm === '') {
-										  		$ksJoin = " LEFT JOIN ( SELECT uk.urun_id, MIN(k.baslik) AS kategori_siralama FROM urun_kategori uk INNER JOIN kategori k ON k.id = uk.kategori_id GROUP BY uk.urun_id ) ks ON ks.urun_id = u.id ";
-										  		$orderSql = "CASE WHEN ks.kategori_siralama IS NULL OR ks.kategori_siralama = '' THEN 1 ELSE 0 END, ks.kategori_siralama {$categoryDir}, u.sira ASC, u.baslik ASC, u.id DESC";
-										  	} else {
-										  		$orderSql = "u.sira ASC, u.baslik ASC, u.id DESC";
-										  	}
+										  	// PERFORMANS: Kategori sorting JOIN'i disabled (cok yavas)
+										  	// Bunun yerine kategorileri ayrı toplu sorguda cekiyoruz
+										  	$orderSql = "u.sira ASC, u.baslik ASC, u.id DESC";
 										  }
 										  // PERFORMANS: Kategori sortunda index yok mu ekle
 										  if (($sortType === 'kategori_asc' || $sortType === 'kategori_desc') && !isset($_SESSION['urunler_idx_created'])) {

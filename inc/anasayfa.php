@@ -17,38 +17,6 @@ if (!isset($language)) {
     --bt-orange2: #ff7a2b;
 }
 
-/* TOPBAR */
-.bt-topbar {
-    background: var(--bt-orange);
-    padding: 6px 0;
-}
-.bt-topbar-inner {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 20px;
-}
-.bt-topbar span, .bt-topbar a {
-    font-size: 12px;
-    color: rgba(255,255,255,.9);
-    text-decoration: none;
-}
-.bt-topbar a:hover { color: #fff; }
-.bt-topbar-links { display: flex; gap: 16px; align-items: center; }
-.bt-lang-btn {
-    background: rgba(255,255,255,.2);
-    border: none;
-    color: #fff;
-    padding: 2px 8px;
-    border-radius: 3px;
-    font-size: 11px;
-    cursor: pointer;
-    text-decoration: none;
-}
-.bt-lang-btn:hover, .bt-lang-btn.active { background: rgba(255,255,255,.4); color: #fff; }
-
 /* HERO SEARCH SECTION */
 .bt-hero {
     background: var(--bt-dark);
@@ -484,28 +452,7 @@ if (!isset($language)) {
 }
 </style>
 
-<!-- ===== TOPBAR ===== -->
-<div class="bt-topbar">
-    <div class="bt-topbar-inner">
-        <span><i class="fa fa-truck" style="margin-right:5px"></i>
-        <?php echo ($language=='en') ? 'Free shipping over 500 TL' : (($language=='ru') ? 'Бесплатная доставка от 500 TL' : '500 TL üzeri ücretsiz kargo'); ?>
-        &nbsp;|&nbsp;
-        <i class="fa fa-phone" style="margin-right:5px"></i><?php echo $cek['telefon'] ?? ''; ?>
-        </span>
-        <div class="bt-topbar-links">
-            <a href="?lang=tr" class="bt-lang-btn <?php echo ($language=='tr') ? 'active' : ''; ?>">TR</a>
-            <a href="?lang=en" class="bt-lang-btn <?php echo ($language=='en') ? 'active' : ''; ?>">EN</a>
-            <a href="?lang=ru" class="bt-lang-btn <?php echo ($language=='ru') ? 'active' : ''; ?>">RU</a>
-            &nbsp;|&nbsp;
-            <?php if(isset($_SESSION['kullanici']['login'])): ?>
-                <a href="hesabim"><i class="fa fa-user" style="margin-right:4px"></i><?php echo ($language=='en') ? 'My Account' : 'Hesabım'; ?></a>
-            <?php else: ?>
-                <a href="giris-yap"><i class="fa fa-user" style="margin-right:4px"></i><?php echo ($language=='en') ? 'Sign In' : 'Giriş Yap'; ?></a>
-                <a href="uye-ol"><?php echo ($language=='en') ? 'Register' : 'Üye Ol'; ?></a>
-            <?php endif; ?>
-        </div>
-    </div>
-</div>
+
 
 <!-- ===== HERO: ARAÇ ARAMA + SLIDER ===== -->
 <div class="bt-hero">

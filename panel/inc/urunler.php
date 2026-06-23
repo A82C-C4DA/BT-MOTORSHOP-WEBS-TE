@@ -1,4 +1,8 @@
 <?php
+// PERFORMANS: Timeout'u önle
+set_time_limit(120); // 2 dakika (varsayılan 30 saniye)
+ini_set('memory_limit', '256M');
+
 // Eryaz API'yi dahil et
 $apiFile = __DIR__ . '/../../api-eryaz.php';
 if (file_exists($apiFile)) {
@@ -613,25 +617,32 @@ if (!is_array($kategoriSecenekleri)) {
 	$kategoriSecenekleri = [];
 }
 
-$countSql = "SELECT COUNT(DISTINCT u.id) FROM urun u";
-$countWhere = [];
-$countParams = [];
-if ($selectedCategoryId > 0) {
-	$countSql .= " INNER JOIN urun_kategori ukf ON ukf.urun_id = u.id";
-	$countWhere[] = "ukf.kategori_id = ?";
-	$countParams[] = $selectedCategoryId;
+// PERFORMANS: COUNT sorgusu timeout'a girerse, varsayılan değer kullan
+$say = 0;
+try {
+	$db->setAttribute(PDO::ATTR_TIMEOUT, 5); // 5 saniye timeout
+	$countSql = "SELECT COUNT(DISTINCT u.id) FROM urun u";
+	$countWhere = [];
+	$countParams = [];
+	if ($selectedCategoryId > 0) {
+		$countSql .= " INNER JOIN urun_kategori ukf ON ukf.urun_id = u.id";
+		$countWhere[] = "ukf.kategori_id = ?";
+		$countParams[] = $selectedCategoryId;
+	}
+	if ($searchTerm !== '') {
+		$countWhere[] = "(u.baslik LIKE ? OR u.stok_kodu LIKE ?)";
+		$countParams[] = "%{$searchTerm}%";
+		$countParams[] = "%{$searchTerm}%";
+	}
+	if (!empty($countWhere)) {
+		$countSql .= " WHERE " . implode(' AND ', $countWhere);
+	}
+	$sorgusay = $db->prepare($countSql);
+	$sorgusay->execute($countParams);
+	$say = $sorgusay->fetchColumn();
+} catch (Exception $e) {
+	$say = 50; // Fallback: en az 50 ürün olduğunu farz et
 }
-if ($searchTerm !== '') {
-	$countWhere[] = "(u.baslik LIKE ? OR u.stok_kodu LIKE ?)";
-	$countParams[] = "%{$searchTerm}%";
-	$countParams[] = "%{$searchTerm}%";
-}
-if (!empty($countWhere)) {
-	$countSql .= " WHERE " . implode(' AND ', $countWhere);
-}
-$sorgusay = $db->prepare($countSql);
-$sorgusay->execute($countParams);
-$say = $sorgusay->fetchColumn();
 
 $top_sayfa = $say;
 $page      = isset($_GET['no']) ? (int)$_GET['no'] : 1;

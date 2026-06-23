@@ -4,6 +4,27 @@
 
     include 'panel/fonksiyon.php';
 
+    // AJAX: Marka/Model/Motor cascade (anasayfa araç seçimi)
+    if(isset($_GET['ajax'])) {
+        include_once 'panel/db-ayar.php';
+        header('Content-Type: application/json; charset=utf-8');
+        if($_GET['ajax'] === 'model' && !empty($_GET['marka'])) {
+            $marka = trim($_GET['marka']);
+            $stmt = $db->prepare("SELECT DISTINCT model FROM arac WHERE marka = ? AND model <> '' ORDER BY model ASC LIMIT 200");
+            $stmt->execute([$marka]);
+            echo json_encode($stmt->fetchAll(PDO::FETCH_COLUMN));
+        } elseif($_GET['ajax'] === 'motor' && !empty($_GET['marka']) && !empty($_GET['model'])) {
+            $marka = trim($_GET['marka']);
+            $model = trim($_GET['model']);
+            $stmt = $db->prepare("SELECT DISTINCT motor FROM arac WHERE marka = ? AND model = ? AND motor <> '' ORDER BY motor ASC LIMIT 200");
+            $stmt->execute([$marka, $model]);
+            echo json_encode($stmt->fetchAll(PDO::FETCH_COLUMN));
+        } else {
+            echo json_encode([]);
+        }
+        exit;
+    }
+
     // Dil seçeneği yönetimi
     $language = isset($_GET['lang']) ? $_GET['lang'] : (isset($_COOKIE['site_language']) ? $_COOKIE['site_language'] : 'en');
     if (isset($_GET['lang']) && in_array($_GET['lang'], ['tr', 'ru', 'en', 'fr', 'es', 'ar', 'pl'])) {

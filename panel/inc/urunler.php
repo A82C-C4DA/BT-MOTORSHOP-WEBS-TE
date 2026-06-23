@@ -664,9 +664,18 @@ try {
 // PERFORMANS: Liste sorgularinin dayandigi indexleri (yoksa) bir kez olustur.
 try {
 	$ensureIndexes = array(
-		'urun'          => array('idx_urun_sira' => 'sira'),
+		'urun'          => array(
+			'idx_urun_sira' => 'sira',
+			'idx_urun_id' => 'id',
+			'idx_urun_baslik' => 'baslik(100)',
+			'idx_urun_stok_kodu' => 'stok_kodu(50)',
+		),
 		'urun_img'      => array('idx_urunimg_urunid' => 'urun_id'),
-		'urun_kategori' => array('idx_uk_urunid' => 'urun_id', 'idx_uk_katid' => 'kategori_id'),
+		'urun_kategori' => array(
+			'idx_uk_urunid' => 'urun_id',
+			'idx_uk_katid' => 'kategori_id',
+			'idx_uk_urunid_katid' => 'urun_id,kategori_id'
+		),
 	);
 	foreach ($ensureIndexes as $tbl => $idxs) {
 		foreach ($idxs as $idxName => $col) {
@@ -891,6 +900,13 @@ try {
 										  	$ksJoin = " LEFT JOIN ( SELECT uk.urun_id, MIN(k.baslik) AS kategori_siralama FROM urun_kategori uk INNER JOIN kategori k ON k.id = uk.kategori_id GROUP BY uk.urun_id ) ks ON ks.urun_id = u.id ";
 										  	$orderSql = "CASE WHEN ks.kategori_siralama IS NULL OR ks.kategori_siralama = '' THEN 1 ELSE 0 END, ks.kategori_siralama {$categoryDir}, u.sira ASC, u.baslik ASC, u.id DESC";
 										  }
+										  // PERFORMANS: Kategori sortunda index yok mu ekle
+										  if (($sortType === 'kategori_asc' || $sortType === 'kategori_desc') && !isset($_SESSION['urunler_idx_created'])) {
+										  	try {
+										  		$db->query("ALTER TABLE urun_kategori ADD INDEX IF NOT EXISTS idx_uk_urunid_katid (urun_id, kategori_id)");
+										  		$_SESSION['urunler_idx_created'] = true;
+										  	} catch (Exception $e) {}
+										  }
 										  $kategoriFilterJoin = '';
 										  $kategoriFilterWhere = '';
 										  if ($selectedCategoryId > 0) {
@@ -899,6 +915,7 @@ try {
 										  }
 
 										  // Siralamaya gore once id listesini cek, sonra ayni sirayla urunleri getir
+										  // PERFORMANS: Hem arama hem non-arama sorgulerinde LIMIT uygula
 										  if($searchTerm !== ''){
 										  	$ara = $searchTerm;
 										  	$araEscaped = str_replace(["\\", "'"], ["\\\\", "\\'"], $ara);
@@ -910,6 +927,7 @@ try {
 										  		WHERE (u.baslik LIKE '%{$araEscaped}%' OR u.stok_kodu LIKE '%{$araEscaped}%')
 										  		{$kategoriFilterWhere}
 										  		ORDER BY {$orderSql}
+										  		LIMIT {$baslangic},{$limit}
 										  	", PDO::FETCH_ASSOC);
 										  }else{
 										  	$idRows = $db->query("
@@ -937,13 +955,14 @@ try {
 										  }
 
 										  // Yedek: bir sey ters giderse klasik siralama
+										  // PERFORMANS: Arama sorgularinda da LIMIT uygula
 										  if ($query === false) {
 										  	if($searchTerm !== ''){
 										  		$ara = $searchTerm;
 										  		if ($selectedCategoryId > 0) {
-										  			$query = $db->query("SELECT {$selectFields} FROM urun WHERE id IN (SELECT urun_id FROM urun_kategori WHERE kategori_id = '{$selectedCategoryId}') AND (baslik LIKE '%{$ara}%' OR stok_kodu LIKE '%{$ara}%') ORDER BY sira ASC, baslik ASC, id DESC", PDO::FETCH_ASSOC);
+										  			$query = $db->query("SELECT {$selectFields} FROM urun WHERE id IN (SELECT urun_id FROM urun_kategori WHERE kategori_id = '{$selectedCategoryId}') AND (baslik LIKE '%{$ara}%' OR stok_kodu LIKE '%{$ara}%') ORDER BY sira ASC, baslik ASC, id DESC LIMIT {$baslangic},{$limit}", PDO::FETCH_ASSOC);
 										  		} else {
-										  			$query = $db->query("SELECT {$selectFields} FROM urun WHERE baslik LIKE '%{$ara}%' OR stok_kodu LIKE '%{$ara}%' ORDER BY id DESC", PDO::FETCH_ASSOC);
+										  			$query = $db->query("SELECT {$selectFields} FROM urun WHERE baslik LIKE '%{$ara}%' OR stok_kodu LIKE '%{$ara}%' ORDER BY id DESC LIMIT {$baslangic},{$limit}", PDO::FETCH_ASSOC);
 										  		}
 										  	}else{
 										  		if ($selectedCategoryId > 0) {

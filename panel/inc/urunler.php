@@ -897,8 +897,13 @@ try {
 										  } elseif ($sortType === 'sira_asc' || $selectedCategoryId > 0) {
 										  	$orderSql = "u.sira ASC, u.baslik ASC, u.id DESC";
 										  } else {
-										  	$ksJoin = " LEFT JOIN ( SELECT uk.urun_id, MIN(k.baslik) AS kategori_siralama FROM urun_kategori uk INNER JOIN kategori k ON k.id = uk.kategori_id GROUP BY uk.urun_id ) ks ON ks.urun_id = u.id ";
-										  	$orderSql = "CASE WHEN ks.kategori_siralama IS NULL OR ks.kategori_siralama = '' THEN 1 ELSE 0 END, ks.kategori_siralama {$categoryDir}, u.sira ASC, u.baslik ASC, u.id DESC";
+										  	// PERFORMANS: Arama sirasinda kategori JOIN'i bypass et, hizli sirala
+										  	if ($searchTerm === '') {
+										  		$ksJoin = " LEFT JOIN ( SELECT uk.urun_id, MIN(k.baslik) AS kategori_siralama FROM urun_kategori uk INNER JOIN kategori k ON k.id = uk.kategori_id GROUP BY uk.urun_id ) ks ON ks.urun_id = u.id ";
+										  		$orderSql = "CASE WHEN ks.kategori_siralama IS NULL OR ks.kategori_siralama = '' THEN 1 ELSE 0 END, ks.kategori_siralama {$categoryDir}, u.sira ASC, u.baslik ASC, u.id DESC";
+										  	} else {
+										  		$orderSql = "u.sira ASC, u.baslik ASC, u.id DESC";
+										  	}
 										  }
 										  // PERFORMANS: Kategori sortunda index yok mu ekle
 										  if (($sortType === 'kategori_asc' || $sortType === 'kategori_desc') && !isset($_SESSION['urunler_idx_created'])) {
